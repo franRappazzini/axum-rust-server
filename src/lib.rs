@@ -7,6 +7,7 @@ use std::{
 use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, Method},
+    response::Html,
     Json,
 };
 use serde_json::{json, Value};
@@ -26,10 +27,10 @@ impl AppState {
     }
 }
 
-pub async fn index() -> String {
+pub async fn index() -> Html<String> {
     // "Hello, World!"
     let html = fs::read_to_string("index.html").unwrap();
-    html
+    Html(html)
 }
 
 // foo
