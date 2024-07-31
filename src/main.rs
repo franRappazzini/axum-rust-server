@@ -1,18 +1,27 @@
-use axum::{routing::get, Router};
+use axum::{middleware, routing::get, Router};
 use axum_server::{
-    get_foo, handler_state, handler_state_post, index, post_foo, res_json, user_get, AppState,
+    get_foo, handler_state, handler_state_post, index, middleware_one, middleware_two, post_foo,
+    res_json, user_get, AppState,
 };
+use tower::ServiceBuilder;
 
 #[tokio::main]
 async fn main() {
     // shared state
     let shared_state = AppState::new();
 
+    // let service_builder = ServiceBuilder::new()
+    //     .layer(middleware::from_fn(middleware_one))
+    //     .layer(middleware::from_fn(middleware_two));
+
     // build our application with a single route
     let app = Router::new()
         .route("/", get(index))
+        // .layer(service_builder)
         .route("/foo", get(get_foo).post(post_foo))
-        .route("/user/{user_id}", get(user_get))
+        // .layer(middleware::from_fn(middleware_one))
+        .route("/user/:user_id", get(user_get))
+        // .layer(middleware::from_fn(middleware_two))
         .route("/json", get(res_json))
         .route("/shared_state", get(handler_state).post(handler_state_post))
         .with_state(shared_state);

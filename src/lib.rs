@@ -1,13 +1,17 @@
 use std::{
+    borrow::Borrow,
     collections::HashMap,
+    fmt::Debug,
     fs,
     sync::{Arc, Mutex},
 };
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{HeaderMap, Method},
-    response::Html,
+    extract::{Path, Query, Request, State},
+    http,
+    http::StatusCode,
+    middleware::Next,
+    response::{Html, Response},
     Json,
 };
 use serde_json::{json, Value};
@@ -46,8 +50,9 @@ pub async fn post_foo() -> &'static str {
 // extractor
 // -----------
 // `Path` gives you the path parameters and deserializes them.
-pub async fn user_get(Path(user_id): Path<u32>) {
+pub async fn user_get(Path(user_id): Path<String>) -> String {
     println!("user_id: {}", user_id);
+    format!("user id: {}", user_id)
 }
 
 // `Query` gives you the query parameters and deserializes them.
@@ -73,13 +78,6 @@ pub async fn res_json() -> Json<Value> {
 // -----------
 // shared states
 // -----------
-
-#[derive(Debug)]
-struct BodyJson {
-    json: String,
-    name: String,
-    age: u128,
-}
 pub async fn handler_state(State(state): State<AppState>) -> String {
     let counter = state.counter.lock().expect("lock counter");
     let v = state.v.lock().expect("lock v");
@@ -99,4 +97,61 @@ pub async fn handler_state_post(State(state): State<AppState>) -> Json<Value> {
     println!("coutner: {}. vector: {:#?}", counter, v);
 
     Json(json!({"counter": *counter, "vector": *v}))
+}
+
+// ------------
+// middlewares
+// ------------
+
+#[derive(Clone)]
+struct CurrentUser {
+    id: u64,
+}
+
+pub async fn middleware_one(req: Request, next: Next) -> Result<Response, StatusCode> {
+    println!("middleware_one");
+    println!("req: {:#?}", req);
+    // let headers = req.headers();
+    // println!("headers: {:#?}", headers);
+    // let path = req.uri();
+    // println!("path: {:#?}", path);
+    // let method = req.method();
+    // println!("method: {:#?}", method);
+
+    Ok(next.run(req).await)
+}
+
+pub async fn middleware_two(mut req: Request, next: Next) -> Result<Response, StatusCode> {
+    println!("middleware_two");
+    println!("req: {:#?}", req);
+    // let headers = req.headers();
+    // println!("headers: {:#?}", headers);
+    // let path = req.uri();
+    // println!("path: {:#?}", path);
+    // let method = req.method();
+    // println!("method: {:#?}", method);
+
+    let auth_header = req
+        .headers()
+        .get(http::header::AUTHORIZATION)
+        .and_then(|header| header.to_str().ok());
+
+    let auth_header = match auth_header {
+        Some(ah) => ah,
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    if let Some(current_user) = authorize_current_user(auth_header).await {
+        // insert the current user into a request extension so the handler can
+        // extract it
+        req.extensions_mut().insert(current_user);
+        Ok(next.run(req).await)
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
+    }
+}
+
+async fn authorize_current_user(auth_token: &str) -> Option<CurrentUser> {
+    // ...
+    None
 }
