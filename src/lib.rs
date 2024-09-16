@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     collections::HashMap,
     fmt::Debug,
     fs,
@@ -33,7 +32,7 @@ impl AppState {
 
 pub async fn index() -> Html<String> {
     // "Hello, World!"
-    let html = fs::read_to_string("index.html").unwrap();
+    let html = fs::read_to_string("./index.html").unwrap();
     Html(html)
 }
 

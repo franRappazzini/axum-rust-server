@@ -26,7 +26,7 @@ async fn main() {
         .route("/shared_state", get(handler_state).post(handler_state_post))
         .with_state(shared_state);
 
-    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "7878".to_string());
 
     // run our app with hyper, listening globally on port 3000
